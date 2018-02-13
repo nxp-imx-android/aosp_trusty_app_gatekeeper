@@ -34,7 +34,8 @@ MODULE_DEPS += \
 	system/gatekeeper \
 
 MODULE_INCLUDES += \
-	$(LOCAL_DIR)
+	$(LOCAL_DIR) \
+	$(LOCAL_DIR)/../../hardware/libhardware/include
 
 include $(LOCAL_DIR)/$(IPC)/rules.mk
 
