@@ -14,19 +14,17 @@
  * limitations under the License.
  */
 
-#include <openssl/hmac.h>
+#include "trusty_gatekeeper.h"
+
+#include <time.h>
 #include <uapi/err.h>
 
-extern "C" {
 #include <lib/hwkey/hwkey.h>
 #include <lib/keymaster/keymaster.h>
 #include <lib/rng/trusty_rng.h>
 #include <lib/storage/storage.h>
 
-#include <trusty_std.h>
-}
-
-#include "trusty_gatekeeper.h"
+#include <openssl/hmac.h>
 
 #define CALLS_BETWEEN_RNG_RESEEDS 32
 #define RNG_RESEED_SIZE           64

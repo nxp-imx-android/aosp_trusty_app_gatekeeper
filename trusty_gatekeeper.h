@@ -17,7 +17,6 @@
 #ifndef TRUSTY_GATEKEEPER_H_
 #define TRUSTY_GATEKEEPER_H_
 
-#include <trusty_std.h>
 #include <stdio.h>
 
 #include <gatekeeper/gatekeeper.h>

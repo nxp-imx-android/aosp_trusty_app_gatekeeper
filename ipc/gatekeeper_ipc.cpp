@@ -14,17 +14,11 @@
  * limitations under the License.
  */
 
-// TODO: add guard in header
-extern "C" {
 #include <stdlib.h>
-}
-
 #include <string.h>
 #include <stdio.h>
 
-#include <trusty_std.h>
 #include <trusty_ipc.h>
-
 #include <uapi/err.h>
 
 #include "trusty_gatekeeper.h"
