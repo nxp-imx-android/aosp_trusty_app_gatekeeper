@@ -18,11 +18,11 @@
 #define GATEKEEPER_MAX_BUFFER_LENGTH 1024
 
 enum gatekeeper_command {
-	GK_REQ_SHIFT = 1,
-	GK_RESP_BIT  = 1,
+    GK_REQ_SHIFT = 1,
+    GK_RESP_BIT = 1,
 
-	GK_ENROLL       = (0 << GK_REQ_SHIFT),
-	GK_VERIFY       = (1 << GK_REQ_SHIFT),
+    GK_ENROLL = (0 << GK_REQ_SHIFT),
+    GK_VERIFY = (1 << GK_REQ_SHIFT),
 };
 
 /**
@@ -35,4 +35,3 @@ struct gatekeeper_message {
     uint32_t cmd;
     uint8_t payload[0];
 };
-

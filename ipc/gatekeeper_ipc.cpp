@@ -14,27 +14,23 @@
  * limitations under the License.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include <trusty_ipc.h>
 #include <uapi/err.h>
 
-#include "trusty_gatekeeper.h"
 #include "gatekeeper_ipc.h"
+#include "trusty_gatekeeper.h"
 
 using namespace gatekeeper;
-TrustyGateKeeper *device;
+TrustyGateKeeper* device;
 
 class SessionManager {
-  public:
-    SessionManager(long* err) {
-        *err = device->OpenSession();
-    }
-    ~SessionManager() {
-        device->CloseSession();
-    }
+public:
+    SessionManager(long* err) { *err = device->OpenSession(); }
+    ~SessionManager() { device->CloseSession(); }
 };
 
 class MessageDeleter {
@@ -44,34 +40,34 @@ public:
         id_ = id;
     }
 
-    ~MessageDeleter() {
-        put_msg(chan_, id_);
-    }
+    ~MessageDeleter() { put_msg(chan_, id_); }
 
 private:
     handle_t chan_;
     int id_;
 };
 
-
 static gatekeeper_error_t tipc_err_to_gatekeeper_err(long tipc_err) {
     switch (tipc_err) {
-        case NO_ERROR:
-            return ERROR_NONE;
-        case ERR_BAD_LEN:
-        case ERR_NOT_VALID:
-        case ERR_NOT_IMPLEMENTED:
-        case ERR_NOT_SUPPORTED:
-            return ERROR_INVALID;
-        default:
-            return ERROR_UNKNOWN;
+    case NO_ERROR:
+        return ERROR_NONE;
+    case ERR_BAD_LEN:
+    case ERR_NOT_VALID:
+    case ERR_NOT_IMPLEMENTED:
+    case ERR_NOT_SUPPORTED:
+        return ERROR_INVALID;
+    default:
+        return ERROR_UNKNOWN;
     }
 }
 
 template <typename Request, typename Response>
-static gatekeeper_error_t exec_cmd(void (GateKeeper::*operation)(const Request&, Response*),
-                   uint8_t *in_buf, uint32_t in_size,
-                   UniquePtr<uint8_t[]> *out_buf, uint32_t *out_size) {
+static gatekeeper_error_t exec_cmd(void (GateKeeper::*operation)(const Request&,
+                                                                 Response*),
+                                   uint8_t* in_buf,
+                                   uint32_t in_size,
+                                   UniquePtr<uint8_t[]>* out_buf,
+                                   uint32_t* out_size) {
     long rc;
     SessionManager sm(&rc);
     if (rc != NO_ERROR)
@@ -100,7 +96,8 @@ static gatekeeper_error_t exec_cmd(void (GateKeeper::*operation)(const Request&,
         return ERROR_UNKNOWN;
     }
 
-    if(rsp.Serialize(out_buf->get(), out_buf->get() + *out_size) != *out_size) {
+    if (rsp.Serialize(out_buf->get(), out_buf->get() + *out_size) !=
+        *out_size) {
         TLOGE("error serializing response message\n");
         return ERROR_UNKNOWN;
     }
@@ -108,29 +105,33 @@ static gatekeeper_error_t exec_cmd(void (GateKeeper::*operation)(const Request&,
     return ERROR_NONE;
 }
 
-static gatekeeper_error_t handle_request(uint32_t cmd, uint8_t *in_buf, uint32_t in_buf_size,
-                                         UniquePtr<uint8_t[]> *out_buf, uint32_t *out_buf_size) {
+static gatekeeper_error_t handle_request(uint32_t cmd,
+                                         uint8_t* in_buf,
+                                         uint32_t in_buf_size,
+                                         UniquePtr<uint8_t[]>* out_buf,
+                                         uint32_t* out_buf_size) {
     switch (cmd) {
-        case GK_ENROLL:
-            return exec_cmd(&GateKeeper::Enroll, in_buf, in_buf_size,
-                    out_buf, out_buf_size);
-        case GK_VERIFY:
-            return exec_cmd(&GateKeeper::Verify, in_buf, in_buf_size,
-                    out_buf, out_buf_size);
-        default:
-            return ERROR_INVALID;
+    case GK_ENROLL:
+        return exec_cmd(&GateKeeper::Enroll, in_buf, in_buf_size, out_buf,
+                        out_buf_size);
+    case GK_VERIFY:
+        return exec_cmd(&GateKeeper::Verify, in_buf, in_buf_size, out_buf,
+                        out_buf_size);
+    default:
+        return ERROR_INVALID;
     }
 }
 
-
 static gatekeeper_error_t send_response(handle_t chan,
-        uint32_t cmd, uint8_t *out_buf, uint32_t out_buf_size) {
-    struct gatekeeper_message gk_msg = { cmd | GK_RESP_BIT, {}};
+                                        uint32_t cmd,
+                                        uint8_t* out_buf,
+                                        uint32_t out_buf_size) {
+    struct gatekeeper_message gk_msg = {cmd | GK_RESP_BIT, {}};
     iovec_t iov[2] = {
-        { &gk_msg, sizeof(gk_msg) },
-        { out_buf, out_buf_size },
+            {&gk_msg, sizeof(gk_msg)},
+            {out_buf, out_buf_size},
     };
-    ipc_msg_t msg = { 2, iov, 0, NULL };
+    ipc_msg_t msg = {2, iov, 0, NULL};
 
     /* send message back to the caller */
     long rc = send_msg(chan, &msg);
@@ -144,10 +145,12 @@ static gatekeeper_error_t send_response(handle_t chan,
     return ERROR_NONE;
 }
 
-static gatekeeper_error_t send_error_response(handle_t chan, uint32_t cmd, gatekeeper_error_t err) {
+static gatekeeper_error_t send_error_response(handle_t chan,
+                                              uint32_t cmd,
+                                              gatekeeper_error_t err) {
     GateKeeperMessage msg(err);
     size_t serialized_size = msg.GetSerializedSize();
-    uint8_t *out_buf = new uint8_t[serialized_size];
+    uint8_t* out_buf = new uint8_t[serialized_size];
     if (out_buf == NULL) {
         return ERROR_UNKNOWN;
     }
@@ -159,7 +162,6 @@ static gatekeeper_error_t send_error_response(handle_t chan, uint32_t cmd, gatek
     return rc;
 }
 
-
 static long handle_msg(handle_t chan) {
     /* get message info */
     ipc_msg_info_t msg_inf;
@@ -170,8 +172,8 @@ static long handle_msg(handle_t chan) {
 
     // fatal error
     if (rc != NO_ERROR) {
-        TLOGE("failed (%ld) to get_msg for chan (%d), closing connection\n",
-                rc, chan);
+        TLOGE("failed (%ld) to get_msg for chan (%d), closing connection\n", rc,
+              chan);
         return rc;
     }
 
@@ -180,8 +182,8 @@ static long handle_msg(handle_t chan) {
     UniquePtr<uint8_t[]> msg_buf(new uint8_t[msg_inf.len]);
 
     /* read msg content */
-    iovec_t iov = { msg_buf.get(), msg_inf.len };
-    ipc_msg_t msg = { 1, &iov, 0, NULL} ;
+    iovec_t iov = {msg_buf.get(), msg_inf.len};
+    ipc_msg_t msg = {1, &iov, 0, NULL};
 
     rc = read_msg(chan, msg_inf.id, 0, &msg);
 
@@ -190,24 +192,26 @@ static long handle_msg(handle_t chan) {
         return rc;
     }
 
-    if(((size_t)rc) < sizeof(gatekeeper_message)) {
-        TLOGE("invalid message of size (%zu) for chan (%d)\n",
-              (size_t)rc, chan);
+    if (((size_t)rc) < sizeof(gatekeeper_message)) {
+        TLOGE("invalid message of size (%zu) for chan (%d)\n", (size_t)rc,
+              chan);
         return ERROR_INVALID;
     }
 
     /* get request command */
-    gatekeeper_message *gk_msg =
-        reinterpret_cast<struct gatekeeper_message *>(msg_buf.get());
+    gatekeeper_message* gk_msg =
+            reinterpret_cast<struct gatekeeper_message*>(msg_buf.get());
 
     UniquePtr<uint8_t[]> out_buf;
     uint32_t out_buf_size = 0;
     rc = handle_request(gk_msg->cmd, gk_msg->payload,
-            msg_inf.len - sizeof(gatekeeper_message), &out_buf, &out_buf_size);
+                        msg_inf.len - sizeof(gatekeeper_message), &out_buf,
+                        &out_buf_size);
 
     if (rc < 0) {
         TLOGE("unable (%ld) to handle request", rc);
-        return send_error_response(chan, gk_msg->cmd, tipc_err_to_gatekeeper_err(rc));
+        return send_error_response(chan, gk_msg->cmd,
+                                   tipc_err_to_gatekeeper_err(rc));
     }
 
     rc = send_response(chan, gk_msg->cmd, out_buf.get(), out_buf_size);
@@ -219,14 +223,13 @@ static long handle_msg(handle_t chan) {
     return rc;
 }
 
-static void gatekeeper_handle_port(uevent_t *ev) {
+static void gatekeeper_handle_port(uevent_t* ev) {
     if ((ev->event & IPC_HANDLE_POLL_ERROR) ||
         (ev->event & IPC_HANDLE_POLL_HUP) ||
         (ev->event & IPC_HANDLE_POLL_MSG) ||
         (ev->event & IPC_HANDLE_POLL_SEND_UNBLOCKED)) {
         /* should never happen with port handles */
-        TLOGE("error event (0x%x) for port (%d)\n",
-               ev->event, ev->handle);
+        TLOGE("error event (0x%x) for port (%d)\n", ev->event, ev->handle);
         abort();
     }
 
@@ -235,19 +238,17 @@ static void gatekeeper_handle_port(uevent_t *ev) {
         /* incoming connection: accept it */
         int rc = accept(ev->handle, &peer_uuid);
         if (rc < 0) {
-            TLOGE("failed (%d) to accept on port %d\n",
-                    rc, ev->handle);
+            TLOGE("failed (%d) to accept on port %d\n", rc, ev->handle);
             return;
         }
     }
 }
 
-static void gatekeeper_handle_channel(uevent_t *ev) {
+static void gatekeeper_handle_channel(uevent_t* ev) {
     if ((ev->event & IPC_HANDLE_POLL_ERROR) ||
         (ev->event & IPC_HANDLE_POLL_READY)) {
         /* close it as it is in an error state */
-        TLOGE("error event (0x%x) for chan (%d)\n",
-               ev->event, ev->handle);
+        TLOGE("error event (0x%x) for chan (%d)\n", ev->event, ev->handle);
         abort();
     }
 
@@ -257,7 +258,8 @@ static void gatekeeper_handle_channel(uevent_t *ev) {
         long rc = handle_msg(chan);
         if (rc != NO_ERROR) {
             /* report an error and close channel */
-            TLOGE("failed (%ld) to handle event on channel %d\n", rc, ev->handle);
+            TLOGE("failed (%ld) to handle event on channel %d\n", rc,
+                  ev->handle);
             close(chan);
         }
     }
@@ -267,7 +269,6 @@ static void gatekeeper_handle_channel(uevent_t *ev) {
         close(chan);
         return;
     }
-
 }
 
 static long gatekeeper_ipc_init(void) {
@@ -275,7 +276,7 @@ static long gatekeeper_ipc_init(void) {
 
     /* Initialize service */
     rc = port_create(GATEKEEPER_PORT, 1, GATEKEEPER_MAX_BUFFER_LENGTH,
-            IPC_PORT_ALLOW_NS_CONNECT);
+                     IPC_PORT_ALLOW_NS_CONNECT);
     if (rc < 0) {
         TLOGE("Failed (%d) to create port %s\n", rc, GATEKEEPER_PORT);
     }
@@ -297,12 +298,12 @@ int main(void) {
         return rc;
     }
 
-    handle_t port = (handle_t) rc;
+    handle_t port = (handle_t)rc;
 
     /* enter main event loop */
     while (true) {
         event.handle = INVALID_IPC_HANDLE;
-        event.event  = 0;
+        event.event = 0;
         event.cookie = NULL;
 
         rc = wait_any(&event, -1);

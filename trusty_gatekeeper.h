@@ -23,11 +23,11 @@
 
 #define LOG_TAG "trusty_gatekeeper"
 #define TLOGE(fmt, ...) \
-    fprintf(stderr, "%s: %d: " fmt, LOG_TAG, __LINE__,  ## __VA_ARGS__)
+    fprintf(stderr, "%s: %d: " fmt, LOG_TAG, __LINE__, ##__VA_ARGS__)
 
 #if LOCAL_TRACE
 #define TLOGI(fmt, ...) \
-    fprintf(stderr, "%s: %d: " fmt, LOG_TAG, __LINE__,  ## __VA_ARGS__)
+    fprintf(stderr, "%s: %d: " fmt, LOG_TAG, __LINE__, ##__VA_ARGS__)
 #else
 #define TLOGI(fmt, ...)
 #endif
@@ -40,27 +40,42 @@ public:
 
     long OpenSession();
     void CloseSession();
+
 protected:
     // See gatekeeper/gatekeeper.h for documentation
 
-    virtual bool GetAuthTokenKey(const uint8_t **auth_token_key, size_t *length) const;
+    virtual bool GetAuthTokenKey(const uint8_t** auth_token_key,
+                                 size_t* length) const;
 
-    virtual void GetPasswordKey(const uint8_t **password_key, size_t *length);
+    virtual void GetPasswordKey(const uint8_t** password_key, size_t* length);
 
-    virtual void ComputePasswordSignature(uint8_t *signature, size_t signature_length,
-            const uint8_t *key, size_t key_length, const uint8_t *password,
-            size_t password_length, salt_t salt) const;
+    virtual void ComputePasswordSignature(uint8_t* signature,
+                                          size_t signature_length,
+                                          const uint8_t* key,
+                                          size_t key_length,
+                                          const uint8_t* password,
+                                          size_t password_length,
+                                          salt_t salt) const;
 
-    virtual void GetRandom(void *random, size_t requested_size) const;
-    virtual void ComputeSignature(uint8_t *signature, size_t signature_length,
-            const uint8_t *key, size_t key_length, const uint8_t *message,
-            const size_t length) const;
+    virtual void GetRandom(void* random, size_t requested_size) const;
+    virtual void ComputeSignature(uint8_t* signature,
+                                  size_t signature_length,
+                                  const uint8_t* key,
+                                  size_t key_length,
+                                  const uint8_t* message,
+                                  const size_t length) const;
     virtual uint64_t GetMillisecondsSinceBoot() const;
 
-    virtual bool GetFailureRecord(uint32_t uid, secure_id_t user_id, failure_record_t *record,
-            bool secure);
-    virtual bool WriteFailureRecord(uint32_t uid, failure_record_t *record, bool secure);
-    virtual bool ClearFailureRecord(uint32_t uid, secure_id_t user_id, bool secure);
+    virtual bool GetFailureRecord(uint32_t uid,
+                                  secure_id_t user_id,
+                                  failure_record_t* record,
+                                  bool secure);
+    virtual bool WriteFailureRecord(uint32_t uid,
+                                    failure_record_t* record,
+                                    bool secure);
+    virtual bool ClearFailureRecord(uint32_t uid,
+                                    secure_id_t user_id,
+                                    bool secure);
 
     virtual bool IsHardwareBacked() const;
 
@@ -73,11 +88,12 @@ private:
     void ClearMasterKey();
 
     void InitMemoryRecords();
-    bool GetMemoryRecord(secure_id_t user_id, failure_record_t *record);
-    bool WriteMemoryRecord(failure_record_t *record);
-    bool GetSecureFailureRecord(uint32_t uid, secure_id_t user_id,
-            failure_record_t *record);
-    bool WriteSecureFailureRecord(uint32_t uid, failure_record_t *record);
+    bool GetMemoryRecord(secure_id_t user_id, failure_record_t* record);
+    bool WriteMemoryRecord(failure_record_t* record);
+    bool GetSecureFailureRecord(uint32_t uid,
+                                secure_id_t user_id,
+                                failure_record_t* record);
+    bool WriteSecureFailureRecord(uint32_t uid, failure_record_t* record);
 
     UniquePtr<uint8_t[]> master_key_;
     bool rng_initialized_;
@@ -87,6 +103,6 @@ private:
     UniquePtr<failure_record_t[]> mem_records_;
 };
 
-}
+}  // namespace gatekeeper
 
-#endif // TRUSTY_GATEKEEPER_H_
+#endif  // TRUSTY_GATEKEEPER_H_

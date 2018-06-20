@@ -27,7 +27,7 @@
 #include <openssl/hmac.h>
 
 #define CALLS_BETWEEN_RNG_RESEEDS 32
-#define RNG_RESEED_SIZE           64
+#define RNG_RESEED_SIZE 64
 
 #define HMAC_SHA_256_KEY_SIZE 32
 
@@ -39,7 +39,8 @@
 
 namespace gatekeeper {
 
-static const uint8_t DERIVATION_DATA[HMAC_SHA_256_KEY_SIZE] = "TrustyGateKeeperDerivationData0";
+static const uint8_t DERIVATION_DATA[HMAC_SHA_256_KEY_SIZE] =
+        "TrustyGateKeeperDerivationData0";
 
 TrustyGateKeeper::TrustyGateKeeper() : GateKeeper() {
     rng_initialized_ = false;
@@ -95,13 +96,13 @@ long TrustyGateKeeper::DeriveMasterKey() {
         return rc;
     }
 
-    hwkey_session_t session = (hwkey_session_t) rc;
+    hwkey_session_t session = (hwkey_session_t)rc;
 
     master_key_.reset(new uint8_t[HMAC_SHA_256_KEY_SIZE]);
 
     uint32_t kdf_version = HWKEY_KDF_VERSION_1;
     rc = hwkey_derive(session, &kdf_version, DERIVATION_DATA, master_key_.get(),
-            HMAC_SHA_256_KEY_SIZE);
+                      HMAC_SHA_256_KEY_SIZE);
 
     hwkey_close(session);
     return rc;
@@ -112,8 +113,8 @@ void TrustyGateKeeper::ClearMasterKey() {
     master_key_.reset();
 }
 
-bool TrustyGateKeeper::GetAuthTokenKey(const uint8_t **auth_token_key,
-        size_t *length) const {
+bool TrustyGateKeeper::GetAuthTokenKey(const uint8_t** auth_token_key,
+                                       size_t* length) const {
     *length = 0;
     *auth_token_key = NULL;
 
@@ -122,9 +123,9 @@ bool TrustyGateKeeper::GetAuthTokenKey(const uint8_t **auth_token_key,
         return false;
     }
 
-    keymaster_session_t session = (keymaster_session_t) rc;
+    keymaster_session_t session = (keymaster_session_t)rc;
 
-    uint8_t *key = NULL;
+    uint8_t* key = NULL;
     uint32_t local_length = 0;
 
     rc = keymaster_get_auth_token_key(session, &key, &local_length);
@@ -139,36 +140,46 @@ bool TrustyGateKeeper::GetAuthTokenKey(const uint8_t **auth_token_key,
     }
 }
 
-void TrustyGateKeeper::GetPasswordKey(const uint8_t **password_key, size_t *length) {
-    *password_key = const_cast<const uint8_t *>(master_key_.get());
+void TrustyGateKeeper::GetPasswordKey(const uint8_t** password_key,
+                                      size_t* length) {
+    *password_key = const_cast<const uint8_t*>(master_key_.get());
     *length = HMAC_SHA_256_KEY_SIZE;
 }
 
-void TrustyGateKeeper::ComputePasswordSignature(uint8_t *signature, size_t signature_length,
-        const uint8_t *key, size_t key_length, const uint8_t *password,
-        size_t password_length, salt_t salt) const {
+void TrustyGateKeeper::ComputePasswordSignature(uint8_t* signature,
+                                                size_t signature_length,
+                                                const uint8_t* key,
+                                                size_t key_length,
+                                                const uint8_t* password,
+                                                size_t password_length,
+                                                salt_t salt) const {
     // todo: heap allocate
     uint8_t salted_password[password_length + sizeof(salt)];
     memcpy(salted_password, &salt, sizeof(salt));
     memcpy(salted_password + sizeof(salt), password, password_length);
-    ComputeSignature(signature, signature_length, key, key_length, salted_password,
-            password_length + sizeof(salt));
+    ComputeSignature(signature, signature_length, key, key_length,
+                     salted_password, password_length + sizeof(salt));
 }
 
-void TrustyGateKeeper::GetRandom(void *random, size_t requested_size) const {
-    if (random == NULL) return;
+void TrustyGateKeeper::GetRandom(void* random, size_t requested_size) const {
+    if (random == NULL)
+        return;
     trusty_rng_secure_rand(reinterpret_cast<uint8_t*>(random), requested_size);
 }
 
-void TrustyGateKeeper::ComputeSignature(uint8_t *signature, size_t signature_length,
-        const uint8_t *key, size_t key_length, const uint8_t *message,
-        const size_t length) const {
+void TrustyGateKeeper::ComputeSignature(uint8_t* signature,
+                                        size_t signature_length,
+                                        const uint8_t* key,
+                                        size_t key_length,
+                                        const uint8_t* message,
+                                        const size_t length) const {
     uint8_t buf[HMAC_SHA_256_KEY_SIZE];
     size_t buf_len;
 
     HMAC(EVP_sha256(), key, key_length, message, length, buf, &buf_len);
     size_t to_write = buf_len;
-    if (buf_len > signature_length) to_write = signature_length;
+    if (buf_len > signature_length)
+        to_write = signature_length;
     memset(signature, 0, signature_length);
     memcpy(signature, buf, to_write);
 }
@@ -177,16 +188,16 @@ uint64_t TrustyGateKeeper::GetMillisecondsSinceBoot() const {
     status_t rc;
     int64_t secure_time_ns = 0;
     rc = gettime(0, 0, &secure_time_ns);
-    if (rc != NO_ERROR){
+    if (rc != NO_ERROR) {
         secure_time_ns = 0;
         TLOGE("%s Error:[0x%x].\n", __func__, rc);
     }
     return secure_time_ns / 1000 / 1000;
 }
 
-bool TrustyGateKeeper::GetSecureFailureRecord(uint32_t uid, secure_id_t user_id,
-        failure_record_t *record) {
-
+bool TrustyGateKeeper::GetSecureFailureRecord(uint32_t uid,
+                                              secure_id_t user_id,
+                                              failure_record_t* record) {
     storage_session_t session;
     int rc = storage_open_session(&session, STORAGE_CLIENT_TD_PORT);
     if (rc < 0) {
@@ -216,14 +227,14 @@ bool TrustyGateKeeper::GetSecureFailureRecord(uint32_t uid, secure_id_t user_id,
         return false;
     }
 
-    if ((size_t) rc < sizeof(owner_record)) {
+    if ((size_t)rc < sizeof(owner_record)) {
         TLOGE("Error: invalid object size [%d].\n", rc);
         return false;
     }
 
     if (owner_record.secure_user_id != user_id) {
         TLOGE("Error:[%llu != %llu] secure storage corrupt.\n",
-                owner_record.secure_user_id, user_id);
+              owner_record.secure_user_id, user_id);
         return false;
     }
 
@@ -231,8 +242,10 @@ bool TrustyGateKeeper::GetSecureFailureRecord(uint32_t uid, secure_id_t user_id,
     return true;
 }
 
-bool TrustyGateKeeper::GetFailureRecord(uint32_t uid, secure_id_t user_id, failure_record_t *record,
-        bool secure) {
+bool TrustyGateKeeper::GetFailureRecord(uint32_t uid,
+                                        secure_id_t user_id,
+                                        failure_record_t* record,
+                                        bool secure) {
     if (secure) {
         return GetSecureFailureRecord(uid, user_id, record);
     } else {
@@ -240,7 +253,9 @@ bool TrustyGateKeeper::GetFailureRecord(uint32_t uid, secure_id_t user_id, failu
     }
 }
 
-bool TrustyGateKeeper::ClearFailureRecord(uint32_t uid, secure_id_t user_id, bool secure) {
+bool TrustyGateKeeper::ClearFailureRecord(uint32_t uid,
+                                          secure_id_t user_id,
+                                          bool secure) {
     failure_record_t record;
     record.secure_user_id = user_id;
     record.last_checked_timestamp = 0;
@@ -248,7 +263,8 @@ bool TrustyGateKeeper::ClearFailureRecord(uint32_t uid, secure_id_t user_id, boo
     return WriteFailureRecord(uid, &record, secure);
 }
 
-bool TrustyGateKeeper::WriteSecureFailureRecord(uint32_t uid, failure_record_t *record) {
+bool TrustyGateKeeper::WriteSecureFailureRecord(uint32_t uid,
+                                                failure_record_t* record) {
     storage_session_t session;
     int rc = storage_open_session(&session, STORAGE_CLIENT_TD_PORT);
     if (rc < 0) {
@@ -277,7 +293,7 @@ bool TrustyGateKeeper::WriteSecureFailureRecord(uint32_t uid, failure_record_t *
         return false;
     }
 
-    if ((size_t) rc < sizeof(*record)) {
+    if ((size_t)rc < sizeof(*record)) {
         TLOGE("Error: invalid object size [%d].\n", rc);
         return false;
     }
@@ -285,7 +301,9 @@ bool TrustyGateKeeper::WriteSecureFailureRecord(uint32_t uid, failure_record_t *
     return true;
 }
 
-bool TrustyGateKeeper::WriteFailureRecord(uint32_t uid, failure_record_t *record, bool secure) {
+bool TrustyGateKeeper::WriteFailureRecord(uint32_t uid,
+                                          failure_record_t* record,
+                                          bool secure) {
     if (secure) {
         return WriteSecureFailureRecord(uid, record);
     } else {
@@ -299,14 +317,15 @@ bool TrustyGateKeeper::IsHardwareBacked() const {
 
 void TrustyGateKeeper::InitMemoryRecords() {
     if (!mem_records_.get()) {
-        failure_record_t *mem_recs = new failure_record_t[MAX_FAILURE_RECORDS];
+        failure_record_t* mem_recs = new failure_record_t[MAX_FAILURE_RECORDS];
         memset(mem_recs, 0, sizeof(*mem_recs));
         mem_records_.reset(mem_recs);
         num_mem_records_ = 0;
     }
 }
 
-bool TrustyGateKeeper::GetMemoryRecord(secure_id_t user_id, failure_record_t *record) {
+bool TrustyGateKeeper::GetMemoryRecord(secure_id_t user_id,
+                                       failure_record_t* record) {
     InitMemoryRecords();
 
     for (int i = 0; i < num_mem_records_; i++) {
@@ -323,7 +342,7 @@ bool TrustyGateKeeper::GetMemoryRecord(secure_id_t user_id, failure_record_t *re
     return true;
 }
 
-bool TrustyGateKeeper::WriteMemoryRecord(failure_record_t *record) {
+bool TrustyGateKeeper::WriteMemoryRecord(failure_record_t* record) {
     InitMemoryRecords();
 
     int idx = 0;
@@ -351,4 +370,4 @@ bool TrustyGateKeeper::WriteMemoryRecord(failure_record_t *record) {
     return true;
 }
 
-}
+}  // namespace gatekeeper
