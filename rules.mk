@@ -35,7 +35,7 @@ MODULE_DEPS += \
 
 MODULE_INCLUDES += \
 	$(LOCAL_DIR) \
-	$(LOCAL_DIR)/../../hardware/libhardware/include
+	$(TRUSTY_TOP)/hardware/libhardware/include
 
 include $(LOCAL_DIR)/$(IPC)/rules.mk
 
