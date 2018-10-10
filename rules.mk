@@ -36,6 +36,12 @@ MODULE_INCLUDES += \
 	$(LOCAL_DIR) \
 	$(TRUSTY_TOP)/hardware/libhardware/include
 
+# Gatekeeper uses variable-length arrays to concatinate a salt with a password.
+# The code should be changed to either use malloc or explicitly pass each piece
+# of data to the hash function.
+# TODO(ncbray): remove the VLA and turn the warning back on.
+MODULE_COMPILEFLAGS := -Wno-vla
+
 include $(LOCAL_DIR)/$(IPC)/rules.mk
 
 include make/module.mk
