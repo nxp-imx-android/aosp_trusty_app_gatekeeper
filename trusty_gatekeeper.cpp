@@ -185,7 +185,7 @@ void TrustyGateKeeper::ComputeSignature(uint8_t* signature,
 }
 
 uint64_t TrustyGateKeeper::GetMillisecondsSinceBoot() const {
-    status_t rc;
+    int rc;
     int64_t secure_time_ns = 0;
     rc = gettime(0, 0, &secure_time_ns);
     if (rc != NO_ERROR) {
