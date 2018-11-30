@@ -21,16 +21,8 @@
 
 #include <gatekeeper/gatekeeper.h>
 
-#define LOG_TAG "trusty_gatekeeper"
-#define TLOGE(fmt, ...) \
-    fprintf(stderr, "%s: %d: " fmt, LOG_TAG, __LINE__, ##__VA_ARGS__)
-
-#if LOCAL_TRACE
-#define TLOGI(fmt, ...) \
-    fprintf(stderr, "%s: %d: " fmt, LOG_TAG, __LINE__, ##__VA_ARGS__)
-#else
-#define TLOGI(fmt, ...)
-#endif
+#define TLOG_TAG "trusty_gatekeeper"
+#include <trusty_log.h>
 
 namespace gatekeeper {
 
