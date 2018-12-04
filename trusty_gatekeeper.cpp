@@ -114,7 +114,7 @@ void TrustyGateKeeper::ClearMasterKey() {
 }
 
 bool TrustyGateKeeper::GetAuthTokenKey(const uint8_t** auth_token_key,
-                                       size_t* length) const {
+                                       uint32_t* length) const {
     *length = 0;
     *auth_token_key = NULL;
 
@@ -141,17 +141,17 @@ bool TrustyGateKeeper::GetAuthTokenKey(const uint8_t** auth_token_key,
 }
 
 void TrustyGateKeeper::GetPasswordKey(const uint8_t** password_key,
-                                      size_t* length) {
+                                      uint32_t* length) {
     *password_key = const_cast<const uint8_t*>(master_key_.get());
     *length = HMAC_SHA_256_KEY_SIZE;
 }
 
 void TrustyGateKeeper::ComputePasswordSignature(uint8_t* signature,
-                                                size_t signature_length,
+                                                uint32_t signature_length,
                                                 const uint8_t* key,
-                                                size_t key_length,
+                                                uint32_t key_length,
                                                 const uint8_t* password,
-                                                size_t password_length,
+                                                uint32_t password_length,
                                                 salt_t salt) const {
     // todo: heap allocate
     uint8_t salted_password[password_length + sizeof(salt)];
@@ -161,20 +161,20 @@ void TrustyGateKeeper::ComputePasswordSignature(uint8_t* signature,
                      salted_password, password_length + sizeof(salt));
 }
 
-void TrustyGateKeeper::GetRandom(void* random, size_t requested_size) const {
+void TrustyGateKeeper::GetRandom(void* random, uint32_t requested_size) const {
     if (random == NULL)
         return;
     trusty_rng_secure_rand(reinterpret_cast<uint8_t*>(random), requested_size);
 }
 
 void TrustyGateKeeper::ComputeSignature(uint8_t* signature,
-                                        size_t signature_length,
+                                        uint32_t signature_length,
                                         const uint8_t* key,
-                                        size_t key_length,
+                                        uint32_t key_length,
                                         const uint8_t* message,
-                                        const size_t length) const {
+                                        const uint32_t length) const {
     uint8_t buf[HMAC_SHA_256_KEY_SIZE];
-    size_t buf_len;
+    unsigned int buf_len;
 
     HMAC(EVP_sha256(), key, key_length, message, length, buf, &buf_len);
     size_t to_write = buf_len;

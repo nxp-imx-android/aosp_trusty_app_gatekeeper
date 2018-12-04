@@ -37,25 +37,25 @@ protected:
     // See gatekeeper/gatekeeper.h for documentation
 
     virtual bool GetAuthTokenKey(const uint8_t** auth_token_key,
-                                 size_t* length) const;
+                                 uint32_t* length) const;
 
-    virtual void GetPasswordKey(const uint8_t** password_key, size_t* length);
+    virtual void GetPasswordKey(const uint8_t** password_key, uint32_t* length);
 
     virtual void ComputePasswordSignature(uint8_t* signature,
-                                          size_t signature_length,
+                                          uint32_t signature_length,
                                           const uint8_t* key,
-                                          size_t key_length,
+                                          uint32_t key_length,
                                           const uint8_t* password,
-                                          size_t password_length,
+                                          uint32_t password_length,
                                           salt_t salt) const;
 
-    virtual void GetRandom(void* random, size_t requested_size) const;
+    virtual void GetRandom(void* random, uint32_t requested_size) const;
     virtual void ComputeSignature(uint8_t* signature,
-                                  size_t signature_length,
+                                  uint32_t signature_length,
                                   const uint8_t* key,
-                                  size_t key_length,
+                                  uint32_t key_length,
                                   const uint8_t* message,
-                                  const size_t length) const;
+                                  const uint32_t length) const;
     virtual uint64_t GetMillisecondsSinceBoot() const;
 
     virtual bool GetFailureRecord(uint32_t uid,
