@@ -16,6 +16,7 @@
 
 #include "trusty_gatekeeper.h"
 
+#include <inttypes.h>
 #include <time.h>
 #include <uapi/err.h>
 
@@ -233,7 +234,7 @@ bool TrustyGateKeeper::GetSecureFailureRecord(uint32_t uid,
     }
 
     if (owner_record.secure_user_id != user_id) {
-        TLOGE("Error:[%llu != %llu] secure storage corrupt.\n",
+        TLOGE("Error:[%" PRIu64 " != %" PRIu64 "] secure storage corrupt.\n",
               owner_record.secure_user_id, user_id);
         return false;
     }
