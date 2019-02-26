@@ -127,7 +127,7 @@ static gatekeeper_error_t send_response(handle_t chan,
                                         uint8_t* out_buf,
                                         uint32_t out_buf_size) {
     struct gatekeeper_message gk_msg = {cmd | GK_RESP_BIT, {}};
-    iovec_t iov[2] = {
+    struct iovec iov[2] = {
             {&gk_msg, sizeof(gk_msg)},
             {out_buf, out_buf_size},
     };
@@ -182,7 +182,7 @@ static long handle_msg(handle_t chan) {
     UniquePtr<uint8_t[]> msg_buf(new uint8_t[msg_inf.len]);
 
     /* read msg content */
-    iovec_t iov = {msg_buf.get(), msg_inf.len};
+    struct iovec iov = {msg_buf.get(), msg_inf.len};
     ipc_msg_t msg = {1, &iov, 0, NULL};
 
     rc = read_msg(chan, msg_inf.id, 0, &msg);
