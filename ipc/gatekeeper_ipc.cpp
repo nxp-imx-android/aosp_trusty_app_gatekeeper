@@ -306,7 +306,7 @@ int main(void) {
         event.event = 0;
         event.cookie = NULL;
 
-        rc = wait_any(&event, -1);
+        rc = wait_any(&event, INFINITE_TIME);
         if (rc < 0) {
             TLOGE("wait_any failed (%ld)\n", rc);
             break;
