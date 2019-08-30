@@ -26,6 +26,13 @@
 
 namespace gatekeeper {
 
+template <typename T>
+struct FreeDeleter {
+    inline void operator()(T* p) const {
+        free(p);
+    }
+};
+
 class TrustyGateKeeper : public GateKeeper {
 public:
     TrustyGateKeeper();
@@ -93,6 +100,10 @@ private:
 
     int num_mem_records_;
     UniquePtr<failure_record_t[]> mem_records_;
+
+    mutable UniquePtr<uint8_t, FreeDeleter<uint8_t>>
+            cached_auth_token_key_;
+    mutable size_t cached_auth_token_key_len_;
 };
 
 }  // namespace gatekeeper
