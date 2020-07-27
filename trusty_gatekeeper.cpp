@@ -57,11 +57,11 @@ long TrustyGateKeeper::OpenSession() {
         return ERR_NOT_READY;
     }
 
-    return DeriveMasterKey();
+    return DerivePasswordKey();
 }
 
 void TrustyGateKeeper::CloseSession() {
-    ClearMasterKey();
+    ClearPasswordKey();
 }
 
 bool TrustyGateKeeper::SeedRngIfNeeded() {
@@ -92,7 +92,7 @@ bool TrustyGateKeeper::ReseedRng() {
     return true;
 }
 
-long TrustyGateKeeper::DeriveMasterKey() {
+long TrustyGateKeeper::DerivePasswordKey() {
     long rc = hwkey_open();
     if (rc < 0) {
         return rc;
@@ -100,19 +100,19 @@ long TrustyGateKeeper::DeriveMasterKey() {
 
     hwkey_session_t session = (hwkey_session_t)rc;
 
-    master_key_.reset(new uint8_t[HMAC_SHA_256_KEY_SIZE]);
+    password_key_.reset(new uint8_t[HMAC_SHA_256_KEY_SIZE]);
 
     uint32_t kdf_version = HWKEY_KDF_VERSION_1;
-    rc = hwkey_derive(session, &kdf_version, DERIVATION_DATA, master_key_.get(),
-                      HMAC_SHA_256_KEY_SIZE);
+    rc = hwkey_derive(session, &kdf_version, DERIVATION_DATA,
+                      password_key_.get(), HMAC_SHA_256_KEY_SIZE);
 
     hwkey_close(session);
     return rc;
 }
 
-void TrustyGateKeeper::ClearMasterKey() {
-    memset_s(master_key_.get(), 0, HMAC_SHA_256_KEY_SIZE);
-    master_key_.reset();
+void TrustyGateKeeper::ClearPasswordKey() {
+    memset_s(password_key_.get(), 0, HMAC_SHA_256_KEY_SIZE);
+    password_key_.reset();
 }
 
 /*
@@ -155,7 +155,7 @@ bool TrustyGateKeeper::GetAuthTokenKey(const uint8_t** auth_token_key,
 
 void TrustyGateKeeper::GetPasswordKey(const uint8_t** password_key,
                                       uint32_t* length) {
-    *password_key = const_cast<const uint8_t*>(master_key_.get());
+    *password_key = const_cast<const uint8_t*>(password_key_.get());
     *length = HMAC_SHA_256_KEY_SIZE;
 }
 

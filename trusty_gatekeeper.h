@@ -83,8 +83,8 @@ private:
     bool ShouldReseedRng();
     bool ReseedRng();
 
-    long DeriveMasterKey();
-    void ClearMasterKey();
+    long DerivePasswordKey();
+    void ClearPasswordKey();
 
     void InitMemoryRecords();
     bool GetMemoryRecord(secure_id_t user_id, failure_record_t* record);
@@ -94,7 +94,7 @@ private:
                                 failure_record_t* record);
     bool WriteSecureFailureRecord(uint32_t uid, failure_record_t* record);
 
-    UniquePtr<uint8_t[]> master_key_;
+    UniquePtr<uint8_t[]> password_key_;
     bool rng_initialized_;
     int calls_since_reseed_;
 
