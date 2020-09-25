@@ -24,7 +24,7 @@ MODULE_SRCS += \
 
 IPC := ipc
 
-MODULE_DEPS += \
+MODULE_LIBRARY_DEPS += \
 	trusty/user/base/lib/libc-trusty \
 	trusty/user/base/lib/libstdc++-trusty \
 	trusty/user/base/lib/rng \
@@ -32,6 +32,7 @@ MODULE_DEPS += \
 	trusty/user/base/lib/storage \
 	trusty/user/base/lib/keymaster \
 	system/gatekeeper \
+	external/boringssl \
 
 MODULE_INCLUDES += \
 	$(LOCAL_DIR) \
@@ -54,5 +55,4 @@ MODULE_DEFINES += \
 
 include $(LOCAL_DIR)/$(IPC)/rules.mk
 
-include make/module.mk
-
+include make/trusted_app.mk
