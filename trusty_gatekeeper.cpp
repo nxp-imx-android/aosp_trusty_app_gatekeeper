@@ -17,7 +17,7 @@
 #include "trusty_gatekeeper.h"
 
 #include <inttypes.h>
-#include <time.h>
+#include <trusty/time.h>
 #include <uapi/err.h>
 
 #include <lib/hwkey/hwkey.h>
