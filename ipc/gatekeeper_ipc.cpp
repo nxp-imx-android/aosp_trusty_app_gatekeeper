@@ -83,6 +83,10 @@ static gatekeeper_error_t exec_cmd(void (GateKeeper::*operation)(const Request&,
     Response rsp;
     (device->*operation)(req, &rsp);
 
+    if (rsp.error == ERROR_NOT_IMPLEMENTED) {
+        return ERROR_NOT_IMPLEMENTED;
+    }
+
     *out_size = rsp.GetSerializedSize();
     if (*out_size > GATEKEEPER_MAX_BUFFER_LENGTH) {
         *out_size = 0;
@@ -117,6 +121,12 @@ static gatekeeper_error_t handle_request(uint32_t cmd,
     case GK_VERIFY:
         return exec_cmd(&GateKeeper::Verify, in_buf, in_buf_size, out_buf,
                         out_buf_size);
+    case GK_DELETE_USER:
+        return exec_cmd(&GateKeeper::DeleteUser, in_buf, in_buf_size, out_buf,
+                        out_buf_size);
+    case GK_DELETE_ALL_USERS:
+        return exec_cmd(&GateKeeper::DeleteAllUsers, in_buf, in_buf_size,
+                        out_buf, out_buf_size);
     default:
         return ERROR_INVALID;
     }
@@ -162,7 +172,7 @@ static gatekeeper_error_t send_error_response(handle_t chan,
     return rc;
 }
 
-static long handle_msg(handle_t chan) {
+static gatekeeper_error_t handle_msg(handle_t chan) {
     /* get message info */
     ipc_msg_info_t msg_inf;
 
@@ -174,7 +184,7 @@ static long handle_msg(handle_t chan) {
     if (rc != NO_ERROR) {
         TLOGE("failed (%ld) to get_msg for chan (%d), closing connection\n", rc,
               chan);
-        return rc;
+        return tipc_err_to_gatekeeper_err(rc);
     }
 
     MessageDeleter md(chan, msg_inf.id);
@@ -189,7 +199,7 @@ static long handle_msg(handle_t chan) {
 
     if (rc < 0) {
         TLOGE("failed to read msg (%ld) for chan (%d)\n", rc, chan);
-        return rc;
+        return tipc_err_to_gatekeeper_err(rc);
     }
 
     if (((size_t)rc) < sizeof(gatekeeper_message)) {
@@ -204,23 +214,22 @@ static long handle_msg(handle_t chan) {
 
     UniquePtr<uint8_t[]> out_buf;
     uint32_t out_buf_size = 0;
-    rc = handle_request(gk_msg->cmd, gk_msg->payload,
-                        msg_inf.len - sizeof(gatekeeper_message), &out_buf,
-                        &out_buf_size);
+    gatekeeper_error_t err = handle_request(
+            gk_msg->cmd, gk_msg->payload,
+            msg_inf.len - sizeof(gatekeeper_message), &out_buf, &out_buf_size);
 
-    if (rc < 0) {
+    if (err != ERROR_NONE) {
         TLOGE("unable (%ld) to handle request", rc);
-        return send_error_response(chan, gk_msg->cmd,
-                                   tipc_err_to_gatekeeper_err(rc));
+        return send_error_response(chan, gk_msg->cmd, err);
     }
 
-    rc = send_response(chan, gk_msg->cmd, out_buf.get(), out_buf_size);
+    err = send_response(chan, gk_msg->cmd, out_buf.get(), out_buf_size);
 
-    if (rc < 0) {
+    if (err != ERROR_NONE) {
         TLOGE("unable (%ld) to send response", rc);
     }
 
-    return rc;
+    return err;
 }
 
 static void gatekeeper_handle_port(uevent_t* ev) {
@@ -255,10 +264,10 @@ static void gatekeeper_handle_channel(uevent_t* ev) {
     handle_t chan = ev->handle;
 
     if (ev->event & IPC_HANDLE_POLL_MSG) {
-        long rc = handle_msg(chan);
-        if (rc != NO_ERROR) {
+        gatekeeper_error_t rc = handle_msg(chan);
+        if (rc != ERROR_NONE) {
             /* report an error and close channel */
-            TLOGE("failed (%ld) to handle event on channel %d\n", rc,
+            TLOGE("failed (%u) to handle event on channel %d\n", rc,
                   ev->handle);
             close(chan);
         }

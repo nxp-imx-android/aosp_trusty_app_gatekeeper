@@ -23,6 +23,8 @@ enum gatekeeper_command {
 
     GK_ENROLL = (0 << GK_REQ_SHIFT),
     GK_VERIFY = (1 << GK_REQ_SHIFT),
+    GK_DELETE_USER = (2 << GK_REQ_SHIFT),
+    GK_DELETE_ALL_USERS = (3 << GK_REQ_SHIFT),
 };
 
 /**
