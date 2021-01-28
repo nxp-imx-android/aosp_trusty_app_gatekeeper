@@ -219,14 +219,14 @@ static gatekeeper_error_t handle_msg(handle_t chan) {
             msg_inf.len - sizeof(gatekeeper_message), &out_buf, &out_buf_size);
 
     if (err != ERROR_NONE) {
-        TLOGE("unable (%ld) to handle request", rc);
+        TLOGE("unable (%ld) to handle request\n", rc);
         return send_error_response(chan, gk_msg->cmd, err);
     }
 
     err = send_response(chan, gk_msg->cmd, out_buf.get(), out_buf_size);
 
     if (err != ERROR_NONE) {
-        TLOGE("unable (%ld) to send response", rc);
+        TLOGE("unable (%ld) to send response\n", rc);
     }
 
     return err;

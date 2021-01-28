@@ -262,7 +262,7 @@ bool TrustyGateKeeper::GetFailureRecord(uint32_t uid,
     if (secure) {
         return GetSecureFailureRecord(uid, user_id, record);
     } else {
-        return GetMemoryRecord(user_id, record);
+        return GetMemoryRecord(uid, user_id, record);
     }
 }
 
@@ -320,7 +320,7 @@ bool TrustyGateKeeper::WriteFailureRecord(uint32_t uid,
     if (secure) {
         return WriteSecureFailureRecord(uid, record);
     } else {
-        return WriteMemoryRecord(record);
+        return WriteMemoryRecord(uid, record);
     }
 }
 
@@ -330,44 +330,45 @@ bool TrustyGateKeeper::IsHardwareBacked() const {
 
 void TrustyGateKeeper::InitMemoryRecords() {
     if (!mem_records_.get()) {
-        failure_record_t* mem_recs = new failure_record_t[MAX_FAILURE_RECORDS];
+        mem_failure_record_t* mem_recs = new mem_failure_record_t[MAX_FAILURE_RECORDS];
         memset(mem_recs, 0, sizeof(*mem_recs));
         mem_records_.reset(mem_recs);
         num_mem_records_ = 0;
     }
 }
 
-bool TrustyGateKeeper::GetMemoryRecord(secure_id_t user_id,
+bool TrustyGateKeeper::GetMemoryRecord(uint32_t uid, secure_id_t user_id,
                                        failure_record_t* record) {
     InitMemoryRecords();
 
     for (int i = 0; i < num_mem_records_; i++) {
-        if (mem_records_[i].secure_user_id == user_id) {
-            *record = mem_records_[i];
-            return true;
+        if (mem_records_[i].uid == uid) {
+            if (mem_records_[i].failure_record.secure_user_id == user_id) {
+                *record = mem_records_[i].failure_record;
+                return true;
+            }
+            TLOGE("Error:[%" PRIu64 " != %" PRIu64 "] mismatched SID for uid %u.\n",
+                  mem_records_[i].failure_record.secure_user_id, user_id, uid);
+            return false;
         }
     }
 
-    record->secure_user_id = user_id;
-    record->failure_counter = 0;
-    record->last_checked_timestamp = 0;
-
-    return true;
+    return false;
 }
 
-bool TrustyGateKeeper::WriteMemoryRecord(failure_record_t* record) {
+bool TrustyGateKeeper::WriteMemoryRecord(uint32_t uid, failure_record_t* record) {
     InitMemoryRecords();
 
     int idx = 0;
     int min_idx = 0;
     uint64_t min_timestamp = ~0ULL;
     for (idx = 0; idx < num_mem_records_; idx++) {
-        if (mem_records_[idx].secure_user_id == record->secure_user_id) {
+        if (mem_records_[idx].uid == uid) {
             break;
         }
 
-        if (mem_records_[idx].last_checked_timestamp <= min_timestamp) {
-            min_timestamp = mem_records_[idx].last_checked_timestamp;
+        if (mem_records_[idx].failure_record.last_checked_timestamp <= min_timestamp) {
+            min_timestamp = mem_records_[idx].failure_record.last_checked_timestamp;
             min_idx = idx;
         }
     }
@@ -379,8 +380,94 @@ bool TrustyGateKeeper::WriteMemoryRecord(failure_record_t* record) {
         num_mem_records_++;
     }
 
-    mem_records_[idx] = *record;
+    mem_records_[idx].uid = uid;
+    mem_records_[idx].failure_record = *record;
     return true;
+}
+
+gatekeeper_error_t TrustyGateKeeper::RemoveUser(uint32_t uid) {
+    bool deleted = false;
+
+    // Remove from the in-memory record
+    if (mem_records_.get()) {
+        int idx = 0;
+        for (idx = 0; idx < num_mem_records_; idx++) {
+            if (mem_records_[idx].uid == uid) {
+                memset(&mem_records_[idx], 0, sizeof(mem_failure_record_t));
+                deleted = true;
+            }
+        }
+    }
+
+    storage_session_t session;
+    int rc = storage_open_session(&session, STORAGE_CLIENT_TD_PORT);
+    if (rc < 0) {
+        TLOGE("Error: [%d] opening storage session\n", rc);
+        return ERROR_UNKNOWN;
+    }
+
+    char id[STORAGE_ID_LENGTH_MAX];
+    memset(id, 0, sizeof(id));
+    snprintf(id, STORAGE_ID_LENGTH_MAX, GATEKEEPER_PREFIX "%u", uid);
+
+    rc = storage_delete_file(session, id, STORAGE_OP_COMPLETE);
+    if (rc < 0) {
+        // if the user's record was added to memory, there may not be a
+        // record in storage, so only report failures if we haven't already
+        // deleted a record from memory.
+        storage_close_session(session);
+        return deleted ? ERROR_NONE : ERROR_UNKNOWN;
+    }
+    storage_close_session(session);
+
+    return ERROR_NONE;
+}
+
+gatekeeper_error_t TrustyGateKeeper::RemoveAllUsers() {
+
+    storage_session_t session;
+    int rc = storage_open_session(&session, STORAGE_CLIENT_TD_PORT);
+    if (rc < 0) {
+        TLOGE("Error: [%d] opening storage session\n", rc);
+        return ERROR_UNKNOWN;
+    }
+
+    storage_open_dir_state *state;
+    rc = storage_open_dir(session, "", &state);
+
+    while (true) {
+        uint8_t dir_flags = 0;
+        char name[STORAGE_ID_LENGTH_MAX];
+        rc = storage_read_dir(session, state, &dir_flags, name, STORAGE_ID_LENGTH_MAX);
+        if (rc < 0) {
+            TLOGE("Error:[%d] opening storage dir.\n", rc);
+            storage_close_session(session);
+            return ERROR_UNKNOWN;
+        }
+        if ((dir_flags & STORAGE_FILE_LIST_STATE_MASK) == STORAGE_FILE_LIST_END) {
+            break;
+        }
+        if (!strncmp(name, GATEKEEPER_PREFIX, strlen(GATEKEEPER_PREFIX))) {
+            storage_delete_file(session, name, 0);
+            if (rc < 0) {
+                TLOGE("Error:[%d] deleting storage object.\n", rc);
+                storage_close_session(session);
+                return ERROR_UNKNOWN;
+            }
+        }
+    }
+    storage_close_dir(session, state);
+    rc = storage_end_transaction(session, true);
+    if (rc < 0) {
+        TLOGE("Error:[%d] ending storage transaction.\n", rc);
+        storage_close_session(session);
+        return ERROR_UNKNOWN;
+    }
+    storage_close_session(session);
+
+    num_mem_records_ = 0;
+
+    return ERROR_NONE;
 }
 
 }  // namespace gatekeeper

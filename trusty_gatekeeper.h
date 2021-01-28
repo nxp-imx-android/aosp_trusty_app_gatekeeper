@@ -33,6 +33,11 @@ struct FreeDeleter {
     }
 };
 
+struct __attribute__((packed)) mem_failure_record_t {
+    struct failure_record_t failure_record;
+    uint32_t uid;
+};
+
 class TrustyGateKeeper : public GateKeeper {
 public:
     TrustyGateKeeper();
@@ -75,6 +80,8 @@ protected:
     virtual bool ClearFailureRecord(uint32_t uid,
                                     secure_id_t user_id,
                                     bool secure);
+    virtual gatekeeper_error_t RemoveUser(uint32_t uid);
+    virtual gatekeeper_error_t RemoveAllUsers();
 
     virtual bool IsHardwareBacked() const;
 
@@ -87,8 +94,8 @@ private:
     void ClearPasswordKey();
 
     void InitMemoryRecords();
-    bool GetMemoryRecord(secure_id_t user_id, failure_record_t* record);
-    bool WriteMemoryRecord(failure_record_t* record);
+    bool GetMemoryRecord(uint32_t uid, secure_id_t user_id, failure_record_t* record);
+    bool WriteMemoryRecord(uint32_t uid, failure_record_t* record);
     bool GetSecureFailureRecord(uint32_t uid,
                                 secure_id_t user_id,
                                 failure_record_t* record);
@@ -99,7 +106,7 @@ private:
     int calls_since_reseed_;
 
     int num_mem_records_;
-    UniquePtr<failure_record_t[]> mem_records_;
+    UniquePtr<mem_failure_record_t[]> mem_records_;
 
     mutable UniquePtr<uint8_t, FreeDeleter<uint8_t>>
             cached_auth_token_key_;
