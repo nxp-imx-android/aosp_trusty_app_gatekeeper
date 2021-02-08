@@ -43,6 +43,15 @@ MODULE_INCLUDES += \
 # TODO(ncbray): remove the VLA and turn the warning back on.
 MODULE_COMPILEFLAGS := -Wno-vla
 
+
+# This should be set to an appropriate storage service port.
+# For example, if a device implements factory reset protection using gatekeeper,
+# it should be set to STORAGE_CLIENT_TDP_PORT or STORAGE_CLIENT_TP_PORT.
+GATEKEEPER_STORAGE_PORT ?= STORAGE_CLIENT_TD_PORT
+
+MODULE_DEFINES += \
+        GATEKEEPER_STORAGE_PORT=$(GATEKEEPER_STORAGE_PORT) \
+
 include $(LOCAL_DIR)/$(IPC)/rules.mk
 
 include make/module.mk
