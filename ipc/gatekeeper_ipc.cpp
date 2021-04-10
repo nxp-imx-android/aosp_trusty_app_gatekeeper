@@ -297,7 +297,7 @@ int main(void) {
     long rc;
     uevent_t event;
 
-    TLOGI("Initializing\n");
+    TLOGD("Initializing\n");
 
     device = new TrustyGateKeeper();
 
