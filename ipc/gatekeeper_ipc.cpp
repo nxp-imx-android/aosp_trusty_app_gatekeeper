@@ -33,20 +33,6 @@ public:
     ~SessionManager() { device->CloseSession(); }
 };
 
-class MessageDeleter {
-public:
-    explicit MessageDeleter(handle_t chan, int id) {
-        chan_ = chan;
-        id_ = id;
-    }
-
-    ~MessageDeleter() { put_msg(chan_, id_); }
-
-private:
-    handle_t chan_;
-    int id_;
-};
-
 static gatekeeper_error_t tipc_err_to_gatekeeper_err(long tipc_err) {
     switch (tipc_err) {
     case NO_ERROR:
@@ -187,8 +173,9 @@ static gatekeeper_error_t handle_msg(handle_t chan) {
         return tipc_err_to_gatekeeper_err(rc);
     }
 
-    MessageDeleter md(chan, msg_inf.id);
-
+    /* TODO: handle heap allocation failure
+     * and retire the message on failure too
+     */
     UniquePtr<uint8_t[]> msg_buf(new uint8_t[msg_inf.len]);
 
     /* read msg content */
@@ -196,6 +183,9 @@ static gatekeeper_error_t handle_msg(handle_t chan) {
     ipc_msg_t msg = {1, &iov, 0, NULL};
 
     rc = read_msg(chan, msg_inf.id, 0, &msg);
+
+    // retire the message (note msg_inf.id becomes invalid after put_msg)
+    put_msg(chan, msg_inf.id);
 
     if (rc < 0) {
         TLOGE("failed to read msg (%ld) for chan (%d)\n", rc, chan);
